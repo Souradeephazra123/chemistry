@@ -44,13 +44,15 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const image = formData.get("file") as File;
     console.log("Image", image);
-    await uploadImage(image);
+    // await uploadImage(image);
     // const imgName = image.name;
     if (!userInput) {
       return NextResponse.json({ error: "Invalid Input" }, { status: 400 });
     }
 
-    const answer = await generateStoryline(userInput,reset);
+    const answer = await generateStoryline(userInput,reset,image);
+
+    console.log("Answer", answer);
 
     // Remove the file after processing
     // const uploadDir = process.env.UPLOAD_DIR || "public/images";

@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import OpenAI from "openai";
 import { v2 as cloudinary } from "cloudinary";
 import { v4 as uuidv4 } from "uuid";
+import stream from "stream";
 
 import { google } from "@ai-sdk/google";
 
@@ -31,11 +32,35 @@ const gemini2FlashExpModel = google("gemini-2.0-flash-exp");
  * @param userInput - The subject or theme of the video advertisement for which the storyline is to be generated.
  */
 
-async function uploadImage(filePath: string) {
+async function uploadImageToCloudinary(buffer, uid) {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { public_id: uid },
+      (error, result) => {
+        if (error) {
+          console.error("Error uploading to Cloudinary:", error);
+          reject({ status: "500", msg: error.message });
+        } else {
+          console.log("Upload successful:", result);
+          resolve({ status: "200", url: result.secure_url });
+        }
+      }
+    );
+
+    const readableStream = new stream.PassThrough();
+    readableStream.end(buffer);
+    readableStream.pipe(uploadStream);
+  });
+}
+
+async function uploadImage(filePath: string, file) {
   try {
-    if (!filePath) {
-      return { msg: "No files were uploaded." };
-    }
+    // if (!filePath) {
+    //   return { msg: "No files were uploaded." };
+    // }
+
+    const buffer = Buffer.from(await file.arrayBuffer());
+    console.log("Buffer", buffer);
     //upload to cloudinary
     // Configuration
     cloudinary.config({
@@ -46,16 +71,33 @@ async function uploadImage(filePath: string) {
 
     // Upload an image
     const uid = uuidv4();
-    const uploadResult = await cloudinary.uploader
-      .upload(filePath, {
-        public_id: uid,
-      })
-      .catch((error) => {
-        console.log(error);
-      });
+    // const uploadResult = await cloudinary.uploader
+    //   .upload(filePath, {
+    //     public_id: uid,
+    //   })
+    //   .catch((error) => {
+    //     console.log(error);
+    //   });
 
-    if (uploadResult && uploadResult.secure_url) {
-      return { status: "200", url: uploadResult.secure_url };
+    // const uploadResult = await cloudinary.uploader.upload_stream(
+    //   { public_id: uid },
+    //   function (error, result) {
+    //     if (error) {
+    //       console.log(result, error);
+    //       return { status: "500", msg: error.message };
+    //     }
+    //     return result;
+    //   }
+    // );
+
+    const uploadResult = await uploadImageToCloudinary(buffer, uid);
+    console.log("uploadResult", uploadResult);
+    // const readableStream = new stream.PassThrough();
+    // readableStream.end(buffer);
+    // readableStream.pipe(uploadResult);
+
+    if (uploadResult && uploadResult.url) {
+      return { status: "200", url: uploadResult.url };
     } else {
       return { status: "500", msg: "Image upload failed." };
     }
@@ -65,7 +107,11 @@ async function uploadImage(filePath: string) {
   }
 }
 
-export async function generateStoryline(userInput: string, reset: boolean) {
+export async function generateStoryline(
+  userInput: string,
+  reset: boolean,
+  file
+) {
   try {
     const systemPrompt = `You are a student of M.Sc. chemistry final year in IIT Bombay, you have to provide of these questions
 
@@ -79,18 +125,18 @@ Describe every step involves here, why this mechanism is preferred, means why fe
 
     const userPrompt = userInput;
 
-    const imageFolderPath = path.resolve("public/images");
+    // const imageFolderPath = path.resolve("public/images");
 
-    if (!fs.existsSync(imageFolderPath)) {
-      fs.mkdirSync(imageFolderPath);
-    }
+    // if (!fs.existsSync(imageFolderPath)) {
+    //   fs.mkdirSync(imageFolderPath);
+    // }
     //get all images in this folder
-    let images = fs.readdirSync(imageFolderPath);
+    // let images = fs.readdirSync(imageFolderPath);
 
-    console.log("images", images[0]);
+    // console.log("images", images[0]);
 
-    const imagePath = path.join(imageFolderPath, "/img1.png");
-    const imgUrl = await uploadImage(imagePath);
+    const imagePath = "";
+    const imgUrl = await uploadImage(imagePath, file);
     console.log("imgUrl", imgUrl);
 
     const messages = [

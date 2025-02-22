@@ -18,10 +18,11 @@ interface PromptFormProps {
 
 export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [data, setData] = useState("");
+  const [data, setData] = useState<string[]>([]);
   const [image, setImage] = useState<File | null>(null);
   const [input, setInput] = useState("");
   const [reset, setReset] = useState<boolean>(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // const refreshHistory = useMutateSWRCache("/generate/gen-video/api/history");
   const router = useRouter();
 
@@ -53,7 +54,7 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
         };
 
         console.log(answer);
-        setData(answer);
+        setData((prev) => [...prev, "\n \n \n Next part \n \n \n", answer]);
       } else {
         toast.error("Failed to generate video ad");
         console.error(((await resp.json()) as { error: unknown }).error);
@@ -81,7 +82,16 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
           name="image"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
+              const file = e.target.files[0];
               setImage(e.target.files[0]);
+
+              const reader = new FileReader();
+              reader.onload = () => {
+                if (reader.readyState === 2) {
+                  setPreviewImage(reader.result as string);
+                }
+              };
+              reader.readAsDataURL(file);
             }
           }}
         />
@@ -110,7 +120,7 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
           <div className=" max-w-1/2 flex flex-col gap-3 justify-end items-end bg-[#433e3e] p-2 rounded-md">
             {image && (
               <Image
-                src={"/images/img1.png"}
+                src={previewImage as string}
                 alt="image"
                 width={500}
                 height={240}
