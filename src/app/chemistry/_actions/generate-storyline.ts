@@ -195,3 +195,86 @@ Describe every step involves here, why this mechanism is preferred, means why fe
     console.error("Error in generateStoryline", error);
   }
 }
+
+export async function generateStorylineReasoning(
+  userInput: string,
+  reset: boolean,
+
+) {
+  try {
+    const systemPrompt = `You are a student of M.Sc. chemistry final year in IIT Bombay, you have to provide of these questions
+
+i will provide you images organic reaction , you have to analyze , from a reactant to product, you have to show mechanism by providing answer
+Describe every step involves here, why this mechanism is preferred, means why feasible
+
+`;
+    if (!systemPrompt) {
+      throw new Error("Advt. Video Base Prompt' missing in system prompts");
+    }
+
+    const userPrompt = userInput;
+
+    // const imageFolderPath = path.resolve("public/images");
+
+    // if (!fs.existsSync(imageFolderPath)) {
+    //   fs.mkdirSync(imageFolderPath);
+    // }
+    //get all images in this folder
+    // let images = fs.readdirSync(imageFolderPath);
+
+    // console.log("images", images[0]);
+
+    const messages = [
+      {
+        role: "system",
+        content: `You are an expert in MSc-level chemistry. Analyze the given image and provide a detailed response based on the user’s input.
+	  I will provide you images of organic reactions, you have to analyze them, from reactant to product, and show the mechanism by providing an answer.
+	  Describe every step involved, explain why this mechanism is preferred, and why it is feasible.`,
+      },
+    ];
+
+    // Function to add user input and AI responses to the conversation
+    interface MessageContent {
+      type: string;
+      text?: string;
+      image_url?: { url: string };
+    }
+
+    interface Message {
+      role: string;
+      contents: MessageContent | MessageContent[];
+    }
+
+    function addMessage(role, content) {
+      messages.push({ role, content });
+    }
+
+    // Add user input and image
+    addMessage("user", [{ type: "text", text: userPrompt }]);
+
+    const completion = await openai.chat.completions.create({
+      model: "o3-mini",
+      reasoning_effort: "high",
+      messages: messages,
+    });
+
+    addMessage("assistant", completion.choices[0].message["content"]);
+
+    function resetConversation() {
+      messages.length = 0; // Clears the existing messages
+      messages.push({
+        role: "system",
+        content: `You are an expert in MSc-level chemistry. Analyze the given image and provide a detailed response based on the user’s input.
+        I will provide you images of organic reactions, you have to analyze them, from reactant to product, and show the mechanism by providing an answer.
+        Describe every step involved, explain why this mechanism is preferred, and why it is feasible.`,
+      });
+    }
+    if (reset) {
+      resetConversation();
+    }
+
+    return completion.choices[0].message["content"];
+  } catch (error) {
+    console.error("Error in generateStoryline", error);
+  }
+}

@@ -16,10 +16,9 @@ interface PromptFormProps {
   defaultPrompt?: string;
 }
 
-
 // function autoFormatText(text:string) {
 //   let formattedText = text;
-  
+
 //   // Heuristic 1: Convert lines that are fully enclosed in ** to a small heading.
 //   // This regex checks if the entire line starts and ends with ** and captures the inner text.
 //   formattedText = formattedText.replace(/^\\*\\*(.+)\\*\\*$/gm, '### $1');
@@ -36,9 +35,9 @@ interface PromptFormProps {
 //   return formattedText;
 // }
 
-function formatText(text:string) {
+function formatText(text: string) {
   // Split the text into lines
-  const lines = text.split('\n');
+  const lines = text.split("\n");
 
   const formattedLines = lines.map((line) => {
     let trimmed = line.trim();
@@ -49,39 +48,45 @@ function formatText(text:string) {
       // Remove leading '#' characters and any following whitespace
       let content = trimmed.replace(/^#+\s*/, "");
       // Apply chemical formula wrapping to the content
-      content = content.replace(/\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g, '\\($1\\)');
+      content = content.replace(
+        /\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g,
+        "\\($1\\)"
+      );
       // Wrap in a div with large, bold styling
       return `<div style="font-size:24px; font-weight:bold;">${content}</div>`;
     }
-    
+
     // Rule 2: Lines that start and end with "**" -> Slight bold & medium text
     if (trimmed.startsWith("**") && trimmed.endsWith("**")) {
       // Remove the wrapping "**" from both ends
       let content = trimmed.slice(2, -2).trim();
       // Apply chemical formula wrapping to the content
-      content = content.replace(/\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g, '\\($1\\)');
+      content = content.replace(
+        /\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g,
+        "\\($1\\)"
+      );
       // Wrap in a div with medium, bold styling
       return `<div style="font-size:18px; font-weight:bold;">${content}</div>`;
     }
-    
+
     // Rule 3: For all other text, wrap potential chemical formulas with LaTeX delimiters.
-    processedLine = processedLine.replace(/\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g, '\\($1\\)');
+    processedLine = processedLine.replace(
+      /\b([A-Z][a-z]*\d+[A-Za-z0-9]*)\b/g,
+      "\\($1\\)"
+    );
 
     return processedLine;
   });
 
   // Join the processed lines back into a single string.
-  return formattedLines.join('\n');
+  return formattedLines.join("\n");
 }
-
 
 export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [data, setData] = useState<string[]>([]);
-  const [image, setImage] = useState<File | null>(null);
   const [input, setInput] = useState("");
   const [reset, setReset] = useState<boolean>(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
   // const refreshHistory = useMutateSWRCache("/generate/gen-video/api/history");
   const router = useRouter();
 
@@ -95,16 +100,10 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
     if (!userInput) {
       toast.error("Please enter a prompt");
     } else {
-      console.log("User image", image);
-      const formData = new FormData();
-      if (image) {
-        formData.append("file", image);
-      }
       const resp = await fetch(
-        `/chemistry/api?userInput=${userInput}&reset=${reset}`,
+        `/chemistry/complex-task/api?userInput=${userInput}&reset=${reset}`,
         {
           method: "POST",
-          body: formData,
         }
       );
       if (resp.ok) {
@@ -112,9 +111,13 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
           answer: string;
         };
 
-        const formattedAnswer = (answer);
+        const formattedAnswer = answer;
         console.log(formattedAnswer);
-        setData((prev) => [...prev, "\n \n \n Next part \n \n \n", formattedAnswer]);
+        setData((prev) => [
+          ...prev,
+          "\n \n \n Next part \n \n \n",
+          formattedAnswer,
+        ]);
       } else {
         toast.error("Failed to generate video ad");
         console.error(((await resp.json()) as { error: unknown }).error);
@@ -137,24 +140,7 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
           defaultValue={"Explain this mechanism"}
           placeholder="What would you like to question me?"
         />
-        <input
-          type="file"
-          name="image"
-          onChange={(e) => {
-            if (e.target.files && e.target.files[0]) {
-              const file = e.target.files[0];
-              setImage(e.target.files[0]);
 
-              const reader = new FileReader();
-              reader.onload = () => {
-                if (reader.readyState === 2) {
-                  setPreviewImage(reader.result as string);
-                }
-              };
-              reader.readAsDataURL(file);
-            }
-          }}
-        />
         <div className=" flex gap-5">
           <Button
             type="submit"
@@ -178,14 +164,6 @@ export function PromptForm({ children, defaultPrompt }: PromptFormProps) {
       <div>
         <div className="w-full ">
           <div className=" max-w-1/2 flex flex-col gap-3 justify-end items-end bg-[#433e3e] p-2 rounded-md">
-            {image && (
-              <Image
-                src={previewImage as string}
-                alt="image"
-                width={500}
-                height={240}
-              />
-            )}
             <p>{input}</p>
           </div>
         </div>
